@@ -1,0 +1,55 @@
+let
+  //POST: LOGIN PARA GERAR BEARER TOKEN (BEARER SERÁ UTILIZADO NA CONSULTA GET).
+  URL1 = "https://api.sankhya.com.br/login", 
+  POST = [
+    #"Content-Type" = "application/json", 
+    Token           = "TOKEN AQUI", 
+    Appkey          = "APPKEY AQUI", 
+    Username        = "USUARIO AQUI (E-MAIL)", 
+    Password        = "SENHA DE USUARIO"
+  ], 
+  //Body do POST para gerar o Bearer é vazio, portanto abaixo deixei em "".
+  postData = Text.ToBinary(""), 
+  Resposta = Web.Contents(URL1, [Headers = POST, Content = postData]), 
+  Fonte1 = Json.Document(Resposta), 
+  BearerToken = Fonte1[bearerToken], 
+  //GET: CONSULTA DE DADOS UTILIZANDO O BEARER GERADO.
+  //Inserir abaixo o body da nossa requisição (GET):
+  Body
+    = "{
+          ""serviceName"": ""CRUDServiceProvider.loadRecords"",
+          ""requestBody"": {
+              ""dataSet"": {
+                  ""rootEntity"": ""CabecalhoNota"",
+                  ""includePresentationFields"": ""S"",
+                  ""offsetPage"": ""0"",
+                  ""criteria"": {
+                      ""expression"": {
+                          ""$"": ""(this.DTNEG = ? )""
+                      },
+                      ""parameter"": {
+                          ""$"": ""01/08/2023"",
+                          ""type"": ""D""
+                      }
+                  },
+                  ""entity"": {
+                      ""fieldset"": {
+                          ""list"": ""NUMNOTA,DTNEG,STATUSNFE,CPFCNPJADQUIRENTE,NOMEADQUIRENTE,VLRNOTA,VLRMERCADORIA""
+                      }
+                  }
+              }
+          }
+      }", 
+  //Inserir endereço da requisição (GET):
+  URL2
+    = "https://api.sankhya.com.br/gateway/v1/mge/service.sbr?serviceName=CRUDServiceProvider.loadRecords&outputType=json", 
+  GET = Web.Contents(
+    URL2, 
+    [
+      Headers = [#"Content-Type" = "application/json", Authorization = "Bearer " & BearerToken],  //BearerToken gerado no POST
+      Content = Text.ToBinary(Body) //Body inserido acima
+    ]
+  ), 
+  Fonte2 = Json.Document(GET)
+in
+  Fonte2
